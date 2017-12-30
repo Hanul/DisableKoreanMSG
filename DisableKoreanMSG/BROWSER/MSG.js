@@ -19,6 +19,10 @@ OVERRIDE(MSG, (origin) => {
 			isKoreanDisabled = false;
 		};
 		
+		let checkIsDisableKorean = m.checkIsDisableKorean = () => {
+			return isKoreanDisabled;
+		};
+		
 		return {
 			
 			run : (keyOrMsgs) => {
