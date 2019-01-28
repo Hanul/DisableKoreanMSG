@@ -9,6 +9,8 @@ OVERRIDE(MSG, (origin) => {
 		let isKoreanDisabled = true;
 		
 		let addData = m.addData = (data) => {
+			//REQUIRED: data
+			
 			EXTEND({
 				origin : msgData,
 				extend : data
@@ -21,6 +23,54 @@ OVERRIDE(MSG, (origin) => {
 		
 		let checkIsDisableKorean = m.checkIsDisableKorean = () => {
 			return isKoreanDisabled;
+		};
+		
+		let loadCSV = m.loadCSV = (url, callback) => {
+			//REQUIRED: url
+			//REQUIRED: callback
+			
+			if (CHECK_IS_ARRAY(url) === true) {
+				
+				NEXT(url, [
+				(url, next) => {
+					loadCSV(url, next);
+				},
+				
+				() => {
+					return callback;
+				}]);
+			}
+			
+			else {
+				
+				GET(url, (content) => {
+					
+					let data = {};
+					
+					let langs;
+					EACH(__PAPA.parse(content).data, (texts, i) => {
+						
+						// 첫번째 줄은 언어 설정
+						if (i === 0) {
+							langs = texts;
+						}
+						
+						else {
+							let subData = {};
+							EACH(texts, (text, j) => {
+								if (j > 0) {
+									subData[langs[j]] = text.replace(/\\n/, '\n');
+								}
+							});
+							data[texts[0]] = subData;
+						}
+					});
+					
+					addData(data);
+					
+					callback();
+				});
+			}
 		};
 		
 		return {
@@ -39,6 +89,10 @@ OVERRIDE(MSG, (origin) => {
 				
 				if (key !== undefined) {
 					msgs = msgData[key];
+				}
+				
+				if (msgs === undefined) {
+					SHOW_ERROR('MSG', key + '에 해당하는 문자열을 찾을 수 없습니다.');
 				}
 				
 				let msg = msgs[isKoreanDisabled === true && INFO.getLang() === 'ko' ? 'en' : INFO.getLang()];
@@ -63,7 +117,8 @@ OVERRIDE(MSG, (origin) => {
 							if (msg[locale] !== undefined) {
 								msg = msg[locale];
 							} else {
-								// get first msg.
+								
+								// 못 찾은 경우 첫번째 문자열을 반환
 								EACH(msg, (_msg) => {
 									msg = _msg;
 									return false;
@@ -75,16 +130,20 @@ OVERRIDE(MSG, (origin) => {
 				
 				if (msg === undefined) {
 					
-					// get first msg.
-					EACH(msgs, (_msg) => {
-						msg = _msg;
-						return false;
-					});
+					// 영어가 있는 경우 영어를, 아닌 경우 첫번째 문자열을 반환
+					if (msgs.en !== undefined) {
+						msg = msgs.en;
+					} else {
+						EACH(msgs, (_msg) => {
+							msg = _msg;
+							return false;
+						});
+					}
 				}
 				
 				if (msg !== undefined && CHECK_IS_DATA(msg) === true) {
 					
-					// get first msg.
+					// 못 찾은 경우 첫번째 문자열을 반환
 					EACH(msg, (_msg) => {
 						msg = _msg;
 						return false;
